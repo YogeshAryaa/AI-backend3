@@ -22,11 +22,14 @@ class Config(BaseSettings):
     frontend_dist: str = "../frontend/dist"
 
     # --- embeddings
-    # multilingual-e5-small understands English, Hindi and (reasonably) Hinglish.
-    embedding_model: str = "intfloat/multilingual-e5-small"
+    # gemini (cloud API, 0 MB RAM) | openai | torch (local model, requires ~700MB RAM)
+    embedding_model: str = "text-embedding-004"
     query_prefix: str = ""                # "" = automatic for known models, "none" = no prefix
     doc_prefix: str = ""
-    embedding_backend: str = "torch"      # torch | onnx (onnx is ~2x faster on CPU, needs optimum[onnxruntime])
+    embedding_backend: str = "gemini"     # gemini | openai | torch | onnx
+    gemini_api_key: str = ""
+    openai_api_key: str = ""
+    embedding_api_url: str = ""
     embedding_batch_size: int = 64
     embedding_threads: int = 0            # 0 = let torch decide
     reranker_model: str = ""              # optional, e.g. cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
