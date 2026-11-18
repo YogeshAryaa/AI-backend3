@@ -1,12 +1,29 @@
 # Backend: private RAG API with free-AI fallback
 
-```bash
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # CPU build, much smaller
+### Windows (PowerShell):
+```powershell
+# 1. Virtual environment create karein
+python -m venv .venv
+
+# 2. Virtual environment activate karein
+.\.venv\Scripts\Activate.ps1
+# (Agar script restriction error aaye, toh seedha .venv ka python use karein:)
+# .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 3. Dependencies install karein
 pip install -r requirements.txt
-cp .env.example .env        # set MONGODB_URI, ADMIN_TOKEN, APP_SECRET_KEY
-uvicorn app.main:app --reload --port 8000                # production: --workers 2, no --reload
+
+# 4. Backend run karein
+python -m uvicorn app.main:app --reload --port 8000
 ```
+
+### Linux / Mac (Bash):
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
 Interactive docs: http://localhost:8000/docs (click **Authorize**, paste a key).
 
 ## How a question is answered
@@ -48,24 +65,3 @@ after `AUTH_FAIL_LIMIT`/minute. Limits and provider cool-downs live in MongoDB, 
 | Browse / delete | `GET /documents`, `DELETE /documents/{id}`, `POST /documents/delete-source` | ingest |
 | Data groups | `GET /namespaces` | search |
 | Instant sync ping | `POST /sync/sources/{name}/notify` | ingest |
-| MongoDB sources | `GET/POST /sync/sources`, `PATCH/DELETE /sync/sources/{name}`, `POST .../run` | admin |
-| One-time collection import | `GET /databases`, `GET /collections`, `GET /collections/{name}/sample`, `POST /ingest/collection` | admin |
-| AI providers | `/providers...` | admin |
-| API keys | `GET/POST /keys`, `PATCH/DELETE /keys/{id}`, `POST /keys/{id}/rotate` | admin |
-| Settings / calibration / status | `GET/PUT /settings`, `POST /settings/calibrate`, `GET /status` | admin |
-
-Collection filters accept plain query operators only (`$eq $gt $in $regex $and $or` ...); `$where`, `$expr`,
-`$function` and anything else that could run code are rejected.
-
-## Scaling notes
-
-- **Embedding** is batched (hundreds of chunks per call) and runs off the event loop, so questions stay fast during
-  a bulk import. `EMBEDDING_BACKEND=onnx` is about 2x faster on CPU.
-- **Local vector index** is updated incrementally (no full reload after each import), stores vectors as compact
-  binary in MongoDB, and filters by data group in memory. Worker processes stay in step through MongoDB.
-  RAM ≈ chunks × 384 × 4 bytes (≈ 1.5 GB per million; `VECTOR_DTYPE=float16` halves it).
-  Beyond a few million chunks use `VECTOR_BACKEND=atlas`.
-- **Sync** prefers change streams (instant), then the `updated_field` (reads only changes), and runs a full
-  reconcile scan only every 1-24 h to catch deletions. No record limit (`SYNC_MAX_RECORDS=0`).
-- Background work (sync, re-embedding, calibration) runs on one worker at a time (a MongoDB lease lock).
-- App collections use the `rag_` prefix so they never clash with your own collections (e.g. a `jobs` collection).
