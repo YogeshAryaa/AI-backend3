@@ -62,17 +62,18 @@ def dim() -> int:
 async def _embed_gemini(texts: list[str]) -> np.ndarray:
     if not texts:
         return np.zeros((0, dim()), np.float32)
-    key = cfg.gemini_api_key.strip()
+    key = cfg.gemini_api_key.strip().strip('"').strip("'")
     if not key:
         raise RuntimeError(
             "GEMINI_API_KEY is missing. Get a free API key at https://aistudio.google.com/apikey "
             "and add it to your .env or Render Environment Variables."
         )
 
-    model = cfg.embedding_model.strip() or "text-embedding-004"
-    if "/" in model and not model.startswith("models/"):
-        model = "text-embedding-004"
-    model_path = model if model.startswith("models/") else f"models/{model}"
+    raw_model = cfg.embedding_model.strip() or "gemini-embedding-001"
+    if "text-embedding" in raw_model or "e5" in raw_model or not raw_model:
+        raw_model = "gemini-embedding-001"
+    model_name = raw_model.replace("models/", "")
+    model_path = f"models/{model_name}"
 
     url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:batchEmbedContents?key={key}"
     out: list[list[float]] = []
@@ -83,7 +84,11 @@ async def _embed_gemini(texts: list[str]) -> np.ndarray:
             chunk = texts[i:i + batch_size]
             payload = {
                 "requests": [
-                    {"model": model_path, "content": {"parts": [{"text": t[:8000]}]}}
+                    {
+                        "model": model_path,
+                        "content": {"parts": [{"text": t[:8000]}]},
+                        "outputDimensionality": 768,
+                    }
                     for t in chunk
                 ]
             }

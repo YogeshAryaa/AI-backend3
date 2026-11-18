@@ -23,7 +23,7 @@ class Config(BaseSettings):
 
     # --- embeddings
     # gemini (cloud API, 0 MB RAM) | openai | torch (local model, requires ~700MB RAM)
-    embedding_model: str = "text-embedding-004"
+    embedding_model: str = "gemini-embedding-001"
     query_prefix: str = ""                # "" = automatic for known models, "none" = no prefix
     doc_prefix: str = ""
     embedding_backend: str = "gemini"     # gemini | openai | torch | onnx
