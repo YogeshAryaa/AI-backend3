@@ -62,11 +62,15 @@ def dim() -> int:
 async def _embed_gemini(texts: list[str]) -> np.ndarray:
     if not texts:
         return np.zeros((0, dim()), np.float32)
-    key = cfg.gemini_api_key.strip().strip('"').strip("'")
-    if not key:
+    import os
+    key = (cfg.gemini_api_key or os.environ.get("GEMINI_API_KEY", "")).strip().strip('"').strip("'")
+    if "=" in key and key.split("=", 1)[0].strip().upper() in ("GEMINI_API_KEY", "API_KEY"):
+        key = key.split("=", 1)[1].strip().strip('"').strip("'")
+
+    if not key or key.startswith("your-") or key.startswith("AIzaSy..."):
         raise RuntimeError(
-            "GEMINI_API_KEY is missing. Get a free API key at https://aistudio.google.com/apikey "
-            "and add it to your .env or Render Environment Variables."
+            "GEMINI_API_KEY is missing or invalid in Render Environment Variables. "
+            "Go to Render Dashboard -> Environment, set Key: GEMINI_API_KEY and Value: your actual key from https://aistudio.google.com/apikey"
         )
 
     raw_model = cfg.embedding_model.strip() or "gemini-embedding-001"
